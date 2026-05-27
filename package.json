@@ -1,0 +1,73 @@
+{
+  "name": "@tmjeee/w-lib",
+  "version": "0.0.1",
+  "description": "A minimal, modern TypeScript library skeleton ready for publishing to npmjs.com. Includes helloWorld sample.",
+  "keywords": [
+    "typescript",
+    "library",
+    "npm",
+    "esm",
+    "hello-world",
+    "skeleton"
+  ],
+  "license": "MIT",
+  "author": "tmjeee <tmjeee@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tmjeee/w-lib.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tmjeee/w-lib/issues"
+  },
+  "homepage": "https://github.com/tmjeee/w-lib#readme",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run test",
+    "publish:npm": "npm run build && npm run test && npm publish --access public",
+    "publish:npm:dry": "npm run build && npm run test && npm publish --access public --dry-run"
+  },
+  "dependencies": {
+    "@angular/animations": "^21.2.13",
+    "@angular/cdk": "^21.2.11",
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/material": "^21.2.11",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsdown": "^0.20.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
+  }
+}

@@ -1,0 +1,148 @@
+name: Publish to npmjs
+
+on:
+  release:
+    types: [published]
+
+  # Manual trigger from Actions tab (useful for testing or emergency publishes)
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Dry run only (do not actually publish)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+
+    # Required for npm Trusted Publishing via OIDC (recommended method).
+    # Also safe to keep when using the classic NPM_TOKEN secret.
+    permissions:
+      contents: read
+      id-token: write
+
+    # This makes NODE_AUTH_TOKEN available to all steps, including setup-node.
+    # When empty, setup-node will not configure token auth (OIDC can still work).
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      # ==========================================
+      # Authentication diagnostics
+      # ==========================================
+      # This step shows exactly which authentication method will be used.
+      # Safe to run — it never prints the actual token value.
+
+      - name: Inspect npm authentication method
+        run: |
+          echo "=== npm Authentication Diagnostics ==="
+          echo ""
+
+          # 1. Classic token via NODE_AUTH_TOKEN
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "✓ NODE_AUTH_TOKEN is set (length: ${#NODE_AUTH_TOKEN} characters)"
+            echo "  → Classic token authentication will be used"
+            echo "  → setup-node has configured ~/.npmrc with the token"
+          else
+            echo "✗ NODE_AUTH_TOKEN is empty or not set"
+            echo "  → No classic token will be used"
+          fi
+          echo ""
+
+          # 2. GitHub OIDC / Trusted Publishing capability
+          if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "✓ GitHub OIDC token request environment is available"
+            echo "  → This workflow can use npm Trusted Publishing (OIDC)"
+          else
+            echo "✗ GitHub OIDC environment variables are NOT present"
+            echo "  → OIDC / Trusted Publishing will not be possible in this run"
+          fi
+          echo ""
+
+          # 3. Show what is actually configured for the registry (mask secrets)
+          echo "=== Registry configuration (from setup-node) ==="
+          npm config get registry 2>/dev/null || echo "(no registry configured)"
+
+          echo ""
+          echo "=== ~/.npmrc contents (tokens masked) ==="
+          if [ -f "$HOME/.npmrc" ]; then
+            sed -E 's/(authToken=)[^[:space:]]+/\1***MASKED***/g; s/(:_auth=)[^[:space:]]+/\1***MASKED***/g' "$HOME/.npmrc" || true
+          else
+            echo "(no ~/.npmrc file found)"
+          fi
+          echo ""
+
+          # 4. Live auth check
+          echo "=== Live authentication check (npm whoami) ==="
+          if npm whoami 2>/dev/null; then
+            echo "✓ npm whoami succeeded — a valid authentication method is active"
+          else
+            echo "✗ npm whoami failed"
+            echo "   This means neither a valid NPM_TOKEN nor OIDC Trusted Publishing"
+            echo "   is currently working for this package."
+          fi
+          echo ""
+          echo "=== End of authentication diagnostics ==="
+
+      # ==========================================
+      # Publish to npm
+      # ==========================================
+      # Authentication options (in priority order):
+      #
+      # 1. npm Trusted Publishing (OIDC) - Recommended
+      #    - No NPM_TOKEN secret required.
+      #    - Requires: this workflow has "id-token: write" permission (already set),
+      #      and the package must be configured on npmjs.com under
+      #      "Trusted Publishing" → connect this GitHub repository.
+      #    - Most secure (no long-lived tokens).
+      #
+      # 2. Classic token (fallback)
+      #    - Create a GitHub secret named NPM_TOKEN containing a valid npm access token.
+      #    - setup-node (with registry-url) will automatically configure .npmrc
+      #      when NODE_AUTH_TOKEN is present.
+      #
+      # NODE_AUTH_TOKEN is defined at the job level (so setup-node sees it).
+      # If it is empty and OIDC is not configured on npmjs.com, publish will fail
+      # with an auth error (correct and expected).
+
+      - name: Publish to npm
+        run: |
+          DRY_RUN="${{ github.event.inputs.dry-run || 'false' }}"
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "🚀 Running in DRY RUN mode (no publish will happen)"
+            npm publish --access public --dry-run --verbose
+          else
+            echo "🚀 Publishing to npm..."
+            npm publish --access public --verbose
+          fi
+
+      - name: Publish success message
+        if: success()
+        run: |
+          echo "✅ Successfully published $(node -p "require('./package.json').name")@$(node -p "require('./package.json').version") to npm!"
