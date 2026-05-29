@@ -98,5 +98,4 @@ export class FsmState {
   enter(_previous: FsmState | null, ..._params: any): void | Promise<void> {}
   exit(_next: FsmState | null, ..._params: any): void | Promise<void> {}
   update(..._params: any): void | Promise<void> {}
-  repeat(..._params: any): void | Promise<void> {}
 }
