@@ -1,6 +1,6 @@
 {
   "name": "@tmjeee/w-lib",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A minimal, modern TypeScript library skeleton ready for publishing to npmjs.com. Includes helloWorld sample.",
   "keywords": [
     "typescript",
