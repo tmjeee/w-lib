@@ -46,6 +46,9 @@ export class RxEventEmitter<T> implements EventEmitter<T> {
     }
   }
   once(event: string, handler: EventEmitterHandler<T>): void {
+    if (!this._listeners[event]) {
+      this._listeners[event] = new Subject();
+    }
     this._listeners[event].pipe(
       take(1)
     ).subscribe(handler);
@@ -83,8 +86,8 @@ export class JsEventEmitter<T> implements EventEmitter<T> {
       this._listeners[event] = [];
     }
     if (handler) {
-      const idx = this._listeners[event].indexOf(h => h == handler);
-      if (idx > 0) {
+      const idx = this._listeners[event].findIndex(h => h == handler);
+      if (idx >= 0) {
         this._listeners[event].splice(idx, 1);
       }
     } else {
@@ -101,6 +104,7 @@ export class JsEventEmitter<T> implements EventEmitter<T> {
       } finally {
         this.off(event, onceOnlyHandler);
       }
-    }
+    };
+    this._listeners[event].push(onceOnlyHandler);
   }
 }

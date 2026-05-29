@@ -1,12 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { helloWorld } from '../src/index.js';
+import { createLoadingState } from '../src/index.js';
 
-describe('w-lib', () => {
-  it('helloWorld returns the canonical greeting', () => {
-    expect(helloWorld()).toBe('Hello, world!');
+describe('w-lib public exports', () => {
+  it('exports createLoadingState from index', () => {
+    expect(typeof createLoadingState).toBe('function');
   });
 
-  it('helloWorld is stable across multiple calls', () => {
-    expect(helloWorld()).toBe(helloWorld());
+  it('createLoadingState works for basic usage', async () => {
+    const loading = createLoadingState<'save'>();
+    expect(loading.is('save')()).toBe(false);
+
+    const result = await loading.withLoading('save', async () => {
+      return 'done';
+    });
+
+    expect(result).toBe('done');
+    expect(loading.is('save')()).toBe(false);
   });
 });

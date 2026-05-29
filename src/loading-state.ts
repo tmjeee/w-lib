@@ -29,12 +29,20 @@ import { computed, signal, Signal } from '@angular/core';
  */
 export function createLoadingState<T extends string = string>() {
   const loadingMap = signal<Partial<Record<T, boolean>>>({});
+  const signalCache = new Map<T, Signal<boolean>>();
 
   /**
    * Returns a reactive signal indicating if a specific action is loading.
+   * The returned signal is stable (same reference) for the same key.
    */
   const is = (key: T): Signal<boolean> => {
-    return computed(() => loadingMap()[key] ?? false);
+    if (!signalCache.has(key)) {
+      signalCache.set(
+        key,
+        computed(() => loadingMap()[key] ?? false)
+      );
+    }
+    return signalCache.get(key)!;
   };
 
   /**
